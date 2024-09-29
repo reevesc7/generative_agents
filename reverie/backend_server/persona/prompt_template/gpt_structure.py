@@ -14,78 +14,131 @@ from openai_cost_logger import DEFAULT_LOG_PATH
 from persona.prompt_template.openai_logger_singleton import OpenAICostLogger_Singleton
 
 config_path = Path("../../openai_config.json")
-with open(config_path, "r") as f:
-    openai_config = json.load(f) 
+cost_logger = None
+models_details = {}
+prompts_params = {}
 
-def setup_client(type: str, config: dict):
-  """Setup the OpenAI client.
 
-  Args:
-      type (str): the type of client. Either "azure" or "openai".
-      config (dict): the configuration for the client.
+#def setup_client(type: str, config: dict):
+  #"""Setup the OpenAI client.
 
-  Raises:
-      ValueError: if the client is invalid.
+  #Args:
+      #type (str): the type of client. Either "azure" or "openai".
+      #config (dict): the configuration for the client.
 
-  Returns:
-      The client object created, either AzureOpenAI or OpenAI.
-  """
-  if type == "azure":
-    client = AzureOpenAI(
-        azure_endpoint=config["endpoint"],
-        api_key=config["key"],
-        api_version=config["api-version"],
+  #Raises:
+      #ValueError: if the client is invalid.
+
+  #Returns:
+      #The client object created, either AzureOpenAI or OpenAI.
+  #"""
+  #if type == "azure":
+    #client = AzureOpenAI(
+        #azure_endpoint=config["endpoint"],
+        #api_key=config["key"],
+        #api_version=config["api-version"],
+    #)
+  #elif type == "openai":
+    #client = OpenAI(
+        #api_key=config["key"],
+    #)
+  #else:
+    #raise ValueError("Invalid client")
+  #return client
+
+
+def setup_client(model_details: dict):
+  if model_details["client"] == "azure":
+    if Path("../../azure.key").is_file():
+      api_key = Path("../../azure.key").read_text().strip()
+    else:
+      raise FileNotFoundError("Attempted to make an Azure client, but azure.key does not exist in the base directory")
+    return AzureOpenAI(
+        azure_endpoint=model_details["model_endpoint"],
+        api_key=api_key,
+        api_version=model_details["api-version"],
     )
-  elif type == "openai":
-    client = OpenAI(
-        api_key=config["key"],
+  elif model_details["client"] == "openai":
+    if Path("../../openai.key").is_file():
+      api_key = Path("../../openai.key").read_text().strip()
+    else:
+      raise FileNotFoundError("Attempted to make an Openai client, but openai.key does not exist in the base directory")
+    return OpenAI(
+        api_key=api_key,
     )
   else:
-    raise ValueError("Invalid client")
-  return client
+    raise ValueError("Invalid client in openai_config.json model alias")
 
-if openai_config["client"] == "azure":
-  client = setup_client("azure", {
-      "endpoint": openai_config["model-endpoint"],
-      "key": openai_config["model-key"],
-      "api-version": openai_config["model-api-version"],
-  })
-elif openai_config["client"] == "openai":
-  client = setup_client("openai", { "key": openai_config["model-key"] })
 
-if openai_config["embeddings-client"] == "azure":  
-  embeddings_client = setup_client("azure", {
-      "endpoint": openai_config["embeddings-endpoint"],
-      "key": openai_config["embeddings-key"],
-      "api-version": openai_config["embeddings-api-version"],
-  })
-elif openai_config["embeddings-client"] == "openai":
-  embeddings_client = setup_client("openai", { "key": openai_config["embeddings-key"] })
-else:
-  raise ValueError("Invalid embeddings client")
+#if openai_config["client"] == "azure":
+  #client = setup_client("azure", {
+      #"endpoint": openai_config["model-endpoint"],
+      #"key": openai_config["model-key"],
+      #"api-version": openai_config["model-api-version"],
+  #})
+#elif openai_config["client"] == "openai":
+  #client = setup_client("openai", { "key": openai_config["model-key"] })
 
-cost_logger = OpenAICostLogger_Singleton(
-  experiment_name = openai_config["experiment-name"],
-  log_folder = DEFAULT_LOG_PATH,
-  cost_upperbound = openai_config["cost-upperbound"]
-)
+#if openai_config["embeddings-client"] == "azure":  
+  #embeddings_client = setup_client("azure", {
+      #"endpoint": openai_config["embeddings-endpoint"],
+      #"key": openai_config["embeddings-key"],
+      #"api-version": openai_config["embeddings-api-version"],
+  #})
+#elif openai_config["embeddings-client"] == "openai":
+  #embeddings_client = setup_client("openai", { "key": openai_config["embeddings-key"] })
+#else:
+  #raise ValueError("Invalid embeddings client")
+
+
+def _read_config():
+  global cost_logger, models_details, prompts_params
+  with open(config_path, "r") as f:
+      openai_config = json.load(f)
+  cost_logger = OpenAICostLogger_Singleton(
+    experiment_name = openai_config["experiment_name"],
+    log_folder = DEFAULT_LOG_PATH,
+    cost_upperbound = openai_config["cost_upperbound"]
+  )
+  for model_alias, model_details in openai_config["models_details"].items():
+    models_details[model_alias] = {
+      "client": setup_client(model_details),
+      "model": model_details["model"],
+      "costs": model_details["costs"]
+    }
+  for prompt_alias, prompt_params in openai_config["prompts_params"].items():
+    prompts_params[prompt_alias] = prompt_params
+
+
+_read_config()
 
 
 def temp_sleep(seconds=0.1):
   time.sleep(seconds)
 
 
+def _get_prompt_params(prompt_alias: str) -> dict:
+  #if model_alias in models_details:
+    #return models_details[model_alias]
+  #else:
+    #print("Warning: Model alias not found in openai_config.json \"models_details\". Using fallback model instead")
+    #return models_details["fallback"]
+  return {}
+
+
 def ChatGPT_single_request(prompt): 
   temp_sleep()
-  completion = client.chat.completions.create(
-    model=openai_config["model"],
+  prompt_params = prompts_params["ChatGPT"]
+  model_details = models_details[prompt_params["model_alias"]]
+  completion = model_details["client"].chat.completions.create(
+    model=model_details["model"],
     messages=[{"role": "user", "content": prompt}]
   )
-  cost_logger.update_cost(completion, input_cost=openai_config["model-costs"]["input"], output_cost=openai_config["model-costs"]["output"])
+  cost_logger.update_cost(completion, input_cost=model_details["costs"]["input"], output_cost=model_details["costs"]["output"])
   return completion.choices[0].message.content
 
 
-def ChatGPT_request(prompt): 
+def ChatGPT_request(prompt: str) -> str:
   """
   Given a prompt and a dictionary of GPT parameters, make a request to OpenAI
   server and returns the response. 
@@ -98,12 +151,14 @@ def ChatGPT_request(prompt):
     a str of GPT-3's response. 
   """
   # temp_sleep()
-  try: 
-    completion = client.chat.completions.create(
-    model=openai_config["model"],
+  try:
+    prompt_params = prompts_params["ChatGPT"]
+    model_details = models_details[prompt_params["model_alias"]]
+    completion = model_details["client"].chat.completions.create(
+    model=model_details["model"],
     messages=[{"role": "user", "content": prompt}]
     )
-    cost_logger.update_cost(completion, input_cost=openai_config["model-costs"]["input"], output_cost=openai_config["model-costs"]["output"])
+    cost_logger.update_cost(completion, input_cost=model_details["costs"]["input"], output_cost=model_details["costs"]["output"])
     return completion.choices[0].message.content
   
   except Exception as e: 
@@ -177,7 +232,7 @@ def ChatGPT_safe_generate_response_OLD(prompt,
   return fail_safe_response
 
 
-def GPT_request(prompt, gpt_parameter): 
+def GPT_request(prompt: str, prompt_alias: str) -> str: 
   """
   Given a prompt and a dictionary of GPT parameters, make a request to OpenAI
   server and returns the response. 
@@ -190,25 +245,27 @@ def GPT_request(prompt, gpt_parameter):
     a str of GPT-3's response. 
   """
   temp_sleep()
-  try: 
+  try:
+    prompt_params = prompts_params[prompt_alias]
+    model_details = models_details[prompt_params["model_alias"]]
     messages = [{
       "role": "system", "content": prompt
     }]
-    response = client.chat.completions.create(
-                model=gpt_parameter["engine"],
+    response = model_details["client"].chat.completions.create(
+                model=model_details["model"],
                 messages=messages,
-                temperature=gpt_parameter["temperature"],
-                max_tokens=gpt_parameter["max_tokens"],
-                top_p=gpt_parameter["top_p"],
-                frequency_penalty=gpt_parameter["frequency_penalty"],
-                presence_penalty=gpt_parameter["presence_penalty"],
-                stream=gpt_parameter["stream"],
-                stop=gpt_parameter["stop"],)
-    cost_logger.update_cost(response=response, input_cost=openai_config["model-costs"]["input"], output_cost=openai_config["model-costs"]["output"])
+                temperature=prompt_params["temperature"],
+                max_tokens=prompt_params["max_tokens"],
+                top_p=prompt_params["top_p"],
+                frequency_penalty=prompt_params["frequency_penalty"],
+                presence_penalty=prompt_params["presence_penalty"],
+                stream=prompt_params["stream"],
+                stop=prompt_params["stop"],)
+    cost_logger.update_cost(response=response, input_cost=model_details["costs"]["input"], output_cost=model_details["costs"]["output"])
     return response.choices[0].message.content
   except Exception as e:
     print(f"Error: {e}")
-    return "TOKEN LIMIT EXCEEDED"
+    return "GPT Error"
 
 
 def generate_prompt(curr_input, prompt_lib_file): 
@@ -240,7 +297,7 @@ def generate_prompt(curr_input, prompt_lib_file):
 
 
 def safe_generate_response(prompt, 
-                           gpt_parameter,
+                           prompt_alias,
                            repeat=5,
                            fail_safe_response="error",
                            func_validate=None,
@@ -250,7 +307,7 @@ def safe_generate_response(prompt,
     print (prompt)
 
   for i in range(repeat): 
-    curr_gpt_response = GPT_request(prompt, gpt_parameter)
+    curr_gpt_response = GPT_request(prompt, prompt_alias)
     try:
       if func_validate(curr_gpt_response, prompt=prompt): 
         return func_clean_up(curr_gpt_response, prompt=prompt)
@@ -263,20 +320,22 @@ def safe_generate_response(prompt,
   return fail_safe_response
 
 
-def get_embedding(text, model=openai_config["embeddings"]):
+def get_embedding(text: str, prompt_alias: str = "embedding") -> list[float]:
   text = text.replace("\n", " ")
   if not text: 
     text = "this is blank"
-  response = embeddings_client.embeddings.create(input=[text], model=model)
-  cost_logger.update_cost(response=response, input_cost=openai_config["embeddings-costs"]["input"], output_cost=openai_config["embeddings-costs"]["output"])
+  prompt_params = prompts_params[prompt_alias]
+  model_details = models_details[prompt_params["model_alias"]]
+  response = model_details["client"].embeddings.create(input=[text], model=model_details["model"])
+  cost_logger.update_cost(response=response, input_cost=model_details["costs"]["input"], output_cost=model_details["costs"]["output"])
   return response.data[0].embedding
 
 
 if __name__ == '__main__':
-  gpt_parameter = {"engine": openai_config["model"], "max_tokens": 50, 
-                   "temperature": 0, "top_p": 1, "stream": False,
-                   "frequency_penalty": 0, "presence_penalty": 0, 
-                   "stop": ['"']}
+  #gpt_parameter = {"engine": openai_config["model"], "max_tokens": 50,
+                   #"temperature": 0, "top_p": 1, "stream": False,
+                   #"frequency_penalty": 0, "presence_penalty": 0,
+                   #"stop": ['"']}
   curr_input = ["driving to a friend's house"]
   prompt_lib_file = "prompt_template/test_prompt_July5.txt"
   prompt = generate_prompt(curr_input, prompt_lib_file)
@@ -292,7 +351,7 @@ if __name__ == '__main__':
     return cleaned_response
 
   output = safe_generate_response(prompt, 
-                                 gpt_parameter,
+                                 "if_main",
                                  5,
                                  "rest",
                                  __func_validate,

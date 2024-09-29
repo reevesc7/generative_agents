@@ -1,0 +1,247 @@
+{
+    "experiment_name": "simulacra_test",
+    "cost_upperbound": 10.0,
+    "models_details": {
+        "3.5": {
+            "client": "openai",
+            "model": "gpt-3.5-turbo",
+            "costs": {
+                "input":  0.5,
+                "output": 1.5
+            },
+            "model_endpoint": null,
+            "api_version": null
+        },
+        "3.5-instruct": {
+            "client": "openai",
+            "model": "gpt-3.5-turbo-instruct",
+            "costs": {
+                "input":  1.5,
+                "output": 2.0
+            },
+            "model_endpoint": null,
+            "api_version": null
+        },
+        "3-small": {
+            "client": "openai",
+            "model": "text-embedding-3-small",
+            "costs": {
+                "input":  0.02,
+                "output": 0.0
+            },
+            "model_endpoint": null,
+            "api_version": null
+        }
+    },
+    "prompts_params": {
+        "fallback": {
+            "model_alias": "3.5"
+        },
+        "ChatGPT": {
+            "model_alias": "3.5"
+        },
+        "embedding": {
+            "model_alias": "3-small"
+        },
+        "wake_up_hour": {
+            "model_alias": "3.5",
+            "max_tokens": 5,
+            "temperature": 0.8,
+            "top_p": 1,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": ["\n"]
+        },
+        "daily_plan": {
+            "model_alias": "3.5",
+            "max_tokens": 500,
+            "temperature": 1.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "generate_hourly_schedule": {
+            "model_alias": "3.5",
+            "max_tokens": 50,
+            "temperature": 0.5,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": ["\n"]
+        },
+        "task_decomp": {
+            "model_alias": "3.5",
+            "max_tokens": 1000,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "action": {
+            "model_alias": "3.5",
+            "max_tokens": 15,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "event_triple": {
+            "model_alias": "3.5",
+            "max_tokens": 30,
+            "temperature": 0.0,
+            "top_p": 1,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": ["\n"]
+        },
+        "act_obj_event_triple": {
+            "model_alias": "3.5",
+            "max_tokens": 30,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": ["\n"]
+        },
+        "new_decomp_schedule": {
+            "model_alias": "3.5",
+            "max_tokens": 1000,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "decide_to_do": {
+            "model_alias": "3.5",
+            "max_tokens": 20,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "create_conversation": {
+            "model_alias": "3.5",
+            "max_tokens": 1000,
+            "temperature": 0.7,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "extract_keywords": {
+            "model_alias": "3.5",
+            "max_tokens": 50,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "keyword_to_thoughts": {
+            "model_alias": "3.5",
+            "max_tokens": 40,
+            "temperature": 0.7,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "convo_to_thoughts": {
+            "model_alias": "3.5",
+            "max_tokens": 40,
+            "temperature": 0.7,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "focal_pt": {
+            "model_alias": "3.5",
+            "max_tokens": 150,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "insight_and_guidance": {
+            "model_alias": "3.5",
+            "max_tokens": 150,
+            "temperature": 0.5,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "generate_next_convo_line": {
+            "model_alias": "3.5",
+            "max_tokens": 250,
+            "temperature": 1.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "generate_whisper_inner_thought": {
+            "model_alias": "3.5",
+            "max_tokens": 50,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "planning_thought_on_convo": {
+            "model_alias": "3.5",
+            "max_tokens": 50,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "memo_on_convo": {
+            "model_alias": "3.5",
+            "max_tokens": 50,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": null
+        },
+        "if_main": {
+            "model_alias": "3.5",
+            "max_tokens": 50,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "stream": false,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stop": ["\""]
+        }
+    }
+}
