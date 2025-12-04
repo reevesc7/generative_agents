@@ -241,6 +241,7 @@ def path_tester(request):
 
 
 def process_environment(request): 
+  print("ATTEMPTING TO CREATE ENVIRONMENT FILE (process_environment)")
   """
   <FRONTEND to BACKEND> 
   This sends the frontend visual world information to the backend server. 

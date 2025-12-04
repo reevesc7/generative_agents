@@ -402,6 +402,7 @@
 	    // We then send this to the frontend server: 
 	    var retrieve_xobj = new XMLHttpRequest();
 	    retrieve_xobj.overrideMimeType("application/json");
+		console.log("ATTEMPTING TO CREATE ENVONMENT FILE (main_script.html)")
 	    retrieve_xobj.open('POST', "{% url 'process_environment' %}", true);
 	    retrieve_xobj.send(json);   
 	    // Finally, we update the phase variable to start the "udpate" process. 
