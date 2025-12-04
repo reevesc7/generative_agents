@@ -13,7 +13,9 @@ from utils import *
 from openai_cost_logger import DEFAULT_LOG_PATH
 from persona.prompt_template.openai_logger_singleton import OpenAICostLogger_Singleton
 
-config_path = Path("../../openai_config.json")
+DUMMY = False
+CONFIG_PATH = Path("../../openai_config.json")
+RESPONSE_LOG_PATH = Path("../../response_logs/simulation_test_013_2024-10-24.txt")
 cost_logger = None
 models_details = {}
 prompts_params = {}
@@ -47,7 +49,7 @@ prompts_params = {}
   #return client
 
 
-def setup_client(model_details: dict):
+def _setup_client(model_details: dict):
   if model_details["client"] == "azure":
     if Path("../../azure.key").is_file():
       api_key = Path("../../azure.key").read_text().strip()
@@ -56,7 +58,7 @@ def setup_client(model_details: dict):
     return AzureOpenAI(
         azure_endpoint=model_details["model_endpoint"],
         api_key=api_key,
-        api_version=model_details["api-version"],
+        api_version=model_details["api_version"],
     )
   elif model_details["client"] == "openai":
     if Path("../../openai.key").is_file():
@@ -93,7 +95,7 @@ def setup_client(model_details: dict):
 
 def _read_config():
   global cost_logger, models_details, prompts_params
-  with open(config_path, "r") as f:
+  with open(CONFIG_PATH, "r") as f:
       openai_config = json.load(f)
   cost_logger = OpenAICostLogger_Singleton(
     experiment_name = openai_config["experiment_name"],
@@ -102,7 +104,7 @@ def _read_config():
   )
   for model_alias, model_details in openai_config["models_details"].items():
     models_details[model_alias] = {
-      "client": setup_client(model_details),
+      "client": _setup_client(model_details),
       "model": model_details["model"],
       "costs": model_details["costs"]
     }
@@ -115,6 +117,12 @@ _read_config()
 
 def temp_sleep(seconds=0.1):
   time.sleep(seconds)
+
+
+def _log_response(strings: list[str]):
+  concat = "\n".join(strings)
+  with open(Path(RESPONSE_LOG_PATH), "a+") as log_file:
+    log_file.write("\n".join(["\nOPEN_RESPONSE ----------------", concat, "CLOSE_RESPONSE ----------------\n"]))
 
 
 def _get_prompt_params(prompt_alias: str) -> dict:
@@ -150,20 +158,34 @@ def ChatGPT_request(prompt: str) -> str:
   RETURNS: 
     a str of GPT-3's response. 
   """
+  response = ""
+  if DUMMY:
+    response = "No brain here"
   # temp_sleep()
   try:
     prompt_params = prompts_params["ChatGPT"]
     model_details = models_details[prompt_params["model_alias"]]
     completion = model_details["client"].chat.completions.create(
-    model=model_details["model"],
-    messages=[{"role": "user", "content": prompt}]
+      model=model_details["model"],
+      messages=[{"role": "user", "content": prompt}]
     )
     cost_logger.update_cost(completion, input_cost=model_details["costs"]["input"], output_cost=model_details["costs"]["output"])
-    return completion.choices[0].message.content
+    response = completion.choices[0].message.content
   
   except Exception as e: 
     print(f"Error: {e}")
-    return "ChatGPT ERROR"
+    response = f"ChatGPT Error: {e}"
+  
+  log_content = [
+    "@PROMPT_PARAMS",
+    "model:" + model_details["model"],
+    "@PROMPT",
+    prompt,
+    "@RESPONSE",
+    response,
+  ]
+  _log_response(log_content)
+  return response
 
 
 def ChatGPT_safe_generate_response(prompt, 
@@ -244,6 +266,9 @@ def GPT_request(prompt: str, prompt_alias: str) -> str:
   RETURNS: 
     a str of GPT-3's response. 
   """
+  response = ""
+  if DUMMY:
+    response = "No brain here"
   temp_sleep()
   try:
     prompt_params = prompts_params[prompt_alias]
@@ -251,7 +276,7 @@ def GPT_request(prompt: str, prompt_alias: str) -> str:
     messages = [{
       "role": "system", "content": prompt
     }]
-    response = model_details["client"].chat.completions.create(
+    completion = model_details["client"].chat.completions.create(
                 model=model_details["model"],
                 messages=messages,
                 temperature=prompt_params["temperature"],
@@ -260,12 +285,31 @@ def GPT_request(prompt: str, prompt_alias: str) -> str:
                 frequency_penalty=prompt_params["frequency_penalty"],
                 presence_penalty=prompt_params["presence_penalty"],
                 stream=prompt_params["stream"],
-                stop=prompt_params["stop"],)
-    cost_logger.update_cost(response=response, input_cost=model_details["costs"]["input"], output_cost=model_details["costs"]["output"])
-    return response.choices[0].message.content
+                stop=prompt_params["stop"],
+    )
+    cost_logger.update_cost(completion, input_cost=model_details["costs"]["input"], output_cost=model_details["costs"]["output"])
+    response = completion.choices[0].message.content
   except Exception as e:
     print(f"Error: {e}")
-    return "GPT Error"
+    response = f"GPT Error: {e}"
+  
+  log_content = [
+    "@PROMPT_PARAMS",
+    model_details["model"],
+    "temperature: " + str(prompt_params["temperature"]),
+    "max_tokens: " + str(prompt_params["max_tokens"]),
+    "top_p: " + str(prompt_params["top_p"]),
+    "frequency_penalty: " + str(prompt_params["frequency_penalty"]),
+    "presence_penalty: " + str(prompt_params["presence_penalty"]),
+    str(prompt_params["stream"]),
+    str(prompt_params["stop"]),
+    "@PROMPT",
+    prompt,
+    "@RESPONSE",
+    response,
+  ]
+  _log_response(log_content)
+  return response
 
 
 def generate_prompt(curr_input, prompt_lib_file): 
